@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ProcessManager.h"
+#include "Subscription.h"
+#include "SubscriptionHandle.h"
 
 #include <vector>
 #include <functional>
@@ -9,102 +11,18 @@
 
 
 template <typename T>
-class Subscription {
-private:
-	std::function<void(T&)> subscriberFunction;
-	unsigned int subscriptionHandles;
-
-	std::recursive_mutex deletionDelayMutex;
-
-public:
-	Subscription(std::function<void(T&)> subscriberFunction) :
-			subscriberFunction(subscriberFunction),
-			subscriptionHandles(0)
-	{
-
-	}
-
-	void incrementSubscriptionHandles() {
-		subscriptionHandles++;
-	}
-
-	void decrementSubscriptionHandles() {
-		subscriptionHandles--;
-		if (subscriptionHandles == 0) {
-			invalidate();
-		}
-	}
-
-	void invalidate() {
-		deletionDelayMutex.lock();
-		subscriberFunction = std::function<void(T&)>();
-		deletionDelayMutex.unlock();
-	}
-
-	bool isValid() {
-		return !!subscriberFunction;
-	}
-
-	void call(T & event) {
-		deletionDelayMutex.lock();
-		if (isValid()) {
-			subscriberFunction(event);
-		}
-		deletionDelayMutex.unlock();
-	}
-};
-
-
-
-template <typename T>
-class SubscriptionHandle {
-private:
-	Subscription<T> & subscription;
-public:
-	virtual ~SubscriptionHandle() {
-		subscription.decrementSubscriptionHandles();
-	}
-
-	SubscriptionHandle(Subscription<T> & subscription) :
-			subscription(subscription)
-	{
-		subscription.incrementSubscriptionHandles();
-	}
-
-	SubscriptionHandle(SubscriptionHandle & other) :
-			subscription(other.subscription)
-	{
-		subscription.incrementSubscriptionHandles();
-	}
-
-
-	SubscriptionHandle & operator=(SubscriptionHandle & rhs) {
-		this->subscription.decrementSubscriptionHandles();
-		this->subscription = rhs.subscription;
-		rhs.subscription.incrementSubscriptionHandles();
-		return *this;
-	}
-
-	void deletingHost() {
-		subscription.invalidate();
-	}
-};
-
-
-
-
-template <typename T>
 class EventManager {
 private:
 	static inline std::vector<T> events;
 	static inline std::mutex eventsMutex;
 
-	static inline std::vector<std::unique_ptr<Subscription<T>>> subscriptions; 	//TODO: make recursion (and thread) safe.
-	static inline std::vector<std::unique_ptr<Subscription<T>>> subscriptionsToAdd; 	//TODO: make recursion (and thread) safe.
+	static inline std::vector<std::unique_ptr<Subscription<T>>> subscriptions;
+	static inline std::vector<std::unique_ptr<Subscription<T>>> subscriptionsToAdd;
 	static inline std::mutex subscriptionsToAddMutex;
 
 public:
-	static void manage() {
+	static void manage() { 	//NOTE: multi-thread unsafe function.
+
 		// Swap out 'events' list for an empty copy; this way we can handle the events-so-far without worrying what happens if 'addEvents' is called in the midst of handling.
 		std::vector<T> _events;
 		eventsMutex.lock(); 	// Lock because all 'events' handlings should be locked.
@@ -116,6 +34,11 @@ public:
 		for (auto & _event : _events) {
 			// Add subscriptions that are to be added.
 			_addToAddSubscriptions();
+
+			// Remove subscriptions if they are invalid
+			_removeInvalidSubscriptions();
+
+			// Call subscriptions with events
 			for (auto & subscription : subscriptions) {
 				subscription->call(_event);
 			}
@@ -170,4 +93,18 @@ private:
 		subscriptions.reserve(subscriptions.size() + _subscriptionsToAdd.size());
 		std::move(_subscriptionsToAdd.begin(), _subscriptionsToAdd.end(), std::back_inserter(subscriptions));
 	}
+
+	static void _removeInvalidSubscriptions() {
+		subscriptions.erase(
+			std::remove_if(
+				subscriptions.begin(),
+				subscriptions.end(),
+				[](std::unique_ptr<Subscription<T>> & subscription) {
+					return !subscription->isValid();
+				}
+			),
+			subscriptions.end()
+		);
+	}
+
 };
