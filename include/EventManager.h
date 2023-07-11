@@ -1,11 +1,12 @@
 #pragma once
 
+#include "ProcessManager.h"
+
 #include <vector>
 #include <functional>
 #include <mutex>
 #include <memory>
 
-#include "ProcessManager.h"
 
 template <typename T>
 class Subscription {
@@ -14,7 +15,6 @@ private:
 	unsigned int subscriptionHandles;
 
 	std::recursive_mutex deletionDelayMutex;
-
 
 public:
 	Subscription(std::function<void(T&)> subscriberFunction) :
@@ -115,7 +115,7 @@ public:
 		// Handle the events.
 		for (auto & _event : _events) {
 			// Add subscriptions that are to be added.
-			_addToAddSubscribers();
+			_addToAddSubscriptions();
 			for (auto & subscription : subscriptions) {
 				subscription->call(_event);
 			}
@@ -132,9 +132,9 @@ public:
 		// Add subscription to list.
 		subscriptionsToAdd.emplace_back(std::make_unique<Subscription<T>>(callbackFunction));
 		// Get a reference to create a SubscriptionHandle<>
-		std::unique_ptr<Subscription<T>> & subscriberRef_up = subscriptionsToAdd.back();
+		std::unique_ptr<Subscription<T>> & subscriptionRef_up = subscriptionsToAdd.back();
 		// Create a SubscriptionHandle<> to return.
-		SubscriptionHandle<T> ret(*subscriberRef_up);
+		SubscriptionHandle<T> ret(*subscriptionRef_up);
 		subscriptionsToAddMutex.unlock();
 
 		return ret;
@@ -159,17 +159,15 @@ private:
 		ProcessManager::requestProcess(&EventManager<T>::manage);
 	}
 
-	static void _addToAddSubscribers() {
+	static void _addToAddSubscriptions() {
 		// Swap out 'subscriptionsToAdd' list for an empty copy; this feels more neat and faster.
-		std::vector<std::unique_ptr<Subscription<T>>> _subscribersToAdd;
+		std::vector<std::unique_ptr<Subscription<T>>> _subscriptionsToAdd;
 		subscriptionsToAddMutex.lock();
-		std::swap(subscriptionsToAdd, _subscribersToAdd);
+		std::swap(subscriptionsToAdd, _subscriptionsToAdd);
 		subscriptionsToAddMutex.unlock();
 		
 		// Insert the to-be-added subscriptions to the subscriptions list.
-		subscriptions.reserve(subscriptions.size() + _subscribersToAdd.size());
-		std::move(_subscribersToAdd.begin(), _subscribersToAdd.end(), std::back_inserter(subscriptions));
+		subscriptions.reserve(subscriptions.size() + _subscriptionsToAdd.size());
+		std::move(_subscriptionsToAdd.begin(), _subscriptionsToAdd.end(), std::back_inserter(subscriptions));
 	}
 };
-
-

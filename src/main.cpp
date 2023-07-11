@@ -1,10 +1,7 @@
-#include <iostream>
-#include <string>
-
 #include "EventManager.h"
 
-
-
+#include <iostream>
+#include <string>
 
 class InputEvent {
 private:
@@ -22,6 +19,8 @@ public:
 	}
 };
 
+
+
 class InputEventReceiver {
 private:
 	SubscriptionHandle<InputEvent> subscriberHandle_inputEvent;
@@ -29,12 +28,14 @@ public:
 	InputEventReceiver() :
 			subscriberHandle_inputEvent(EventManager<InputEvent>::subscribe(&InputEventReceiver::receiveEvent, this))
 	{
+
 	}
 
 	void receiveEvent(InputEvent event) {
 		std::cout << event.getInputString() << std::endl;
 	}
 };
+
 
 
 int main() {
