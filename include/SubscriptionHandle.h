@@ -31,7 +31,11 @@ public:
 		return *this;
 	}
 
-	void deletingHost() {
-		subscription.invalidate();
+	void unsubscribe() {
+		subscription.unsubscribe();
+	}
+
+	void resubscribe() {
+		subscription.resubscribe();
 	}
 };

@@ -12,11 +12,13 @@ private:
 	std::mutex subscriptionHandlesMutex;
 
 	std::recursive_mutex deletionDelayMutex;
+	bool subscribed;
 
 public:
 	Subscription(std::function<void(T&)> subscriberFunction) :
 			subscriberFunction(subscriberFunction),
-			subscriptionHandles(0)
+			subscriptionHandles(0),
+			subscribed(true)
 	{
 
 	}
@@ -50,9 +52,17 @@ public:
 
 	void call(T & event) {
 		deletionDelayMutex.lock();
-		if (isValid()) {
+		if (isValid() && subscribed) {
 			subscriberFunction(event);
 		}
 		deletionDelayMutex.unlock();
+	}
+
+	void unsubscribe() {
+		subscribed = false;
+	}
+
+	void resubscribe() {
+		subscribed = true;
 	}
 };

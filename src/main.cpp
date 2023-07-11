@@ -34,6 +34,14 @@ public:
 	void receiveEvent(InputEvent event) {
 		std::cout << event.getInputString() << std::endl;
 	}
+
+	void unsubscribe() {
+		subscriberHandle_inputEvent.unsubscribe();
+	}
+
+	void resubscribe() {
+		subscriberHandle_inputEvent.resubscribe();
+	}
 };
 
 
@@ -49,9 +57,15 @@ int main() {
 		EventManager<InputEvent>::addEvent("Hello World2!");
 		EventManager<InputEvent>::addEvent("Hello World3!");
 		ProcessManager::run();
+		ier.unsubscribe();
+		EventManager<InputEvent>::addEvent("Hello World4!");
+		ProcessManager::run();
+		ier.resubscribe();
+		EventManager<InputEvent>::addEvent("Hello World5!");
+		ProcessManager::run();
 	}
 
-	EventManager<InputEvent>::addEvent("Hello World4!");
+	EventManager<InputEvent>::addEvent("Hello WorldX!");
 	ProcessManager::run();
 
 	return 0;
