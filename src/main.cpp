@@ -32,7 +32,32 @@ public:
 	}
 
 	void receiveEvent(InputEvent event) {
-		std::cout << event.getInputString() << std::endl;
+		std::cout << "IER:" << event.getInputString() << std::endl;
+	}
+
+	void unsubscribe() {
+		subscriberHandle_inputEvent.unsubscribe();
+	}
+
+	void resubscribe() {
+		subscriberHandle_inputEvent.resubscribe();
+	}
+};
+
+class KeyedInputEventReceiver {
+private:
+	SubscriptionHandle<InputEvent> subscriberHandle_inputEvent;
+	int x;
+public:
+	KeyedInputEventReceiver(int x) :
+			subscriberHandle_inputEvent(EventManager<InputEvent>::keyedSubscribe(&KeyedInputEventReceiver::receiveEvent, x, this)),
+			x(x)
+	{
+
+	}
+
+	void receiveEvent(InputEvent event) {
+		std::cout << "KIER[" << x << "]:" << event.getInputString() << std::endl;
 	}
 
 	void unsubscribe() {
@@ -49,23 +74,54 @@ public:
 int main() {
 	
 	{
-		InputEventReceiver ier;
+	InputEventReceiver ier;
 
-		EventManager<InputEvent>::addEvent("Hello World!");
+		EventManager<InputEvent>::addEvent("Hello World1!");
 
 		ProcessManager::run();
 		EventManager<InputEvent>::addEvent("Hello World2!");
 		EventManager<InputEvent>::addEvent("Hello World3!");
 		ProcessManager::run();
 		ier.unsubscribe();
-		EventManager<InputEvent>::addEvent("Hello World4!");
+		EventManager<InputEvent>::addEvent("Hello World - shouldn't print 1!");
 		ProcessManager::run();
 		ier.resubscribe();
-		EventManager<InputEvent>::addEvent("Hello World5!");
+		EventManager<InputEvent>::addEvent("Hello World4!");
+		ProcessManager::run();
+	}
+	EventManager<InputEvent>::addEvent("Hello World - shouldn't print 2!");
+	ProcessManager::run();
+
+
+	std::cout << "------------" << std::endl;
+
+	{
+		KeyedInputEventReceiver kier(1);
+		KeyedInputEventReceiver kier2(2);
+
+		EventManager<InputEvent>::addKeyedEvent(1, "Hello World1!");
+		EventManager<InputEvent>::addKeyedEvent(2, "~Hello World1!");
+
+		ProcessManager::run();
+		EventManager<InputEvent>::addKeyedEvent(2, "~Hello World2!");
+		EventManager<InputEvent>::addKeyedEvent(1, "Hello World2!");
+		EventManager<InputEvent>::addKeyedEvent(1, "Hello World3!");
+		EventManager<InputEvent>::addKeyedEvent(2, "~Hello World3!");
+		ProcessManager::run();
+		kier.unsubscribe();
+		kier2.unsubscribe();
+		EventManager<InputEvent>::addKeyedEvent(1, "Hello World - shouldn't print 1!");
+		EventManager<InputEvent>::addKeyedEvent(2, "~Hello World - shouldn't print 1!");
+		ProcessManager::run();
+		kier.resubscribe();
+		kier2.resubscribe();
+		EventManager<InputEvent>::addKeyedEvent(2, "~Hello World4!");
+		EventManager<InputEvent>::addKeyedEvent(1, "Hello World4!");
 		ProcessManager::run();
 	}
 
-	EventManager<InputEvent>::addEvent("Hello WorldX!");
+	EventManager<InputEvent>::addKeyedEvent(1, "Hello World - shouldn't print 2!");
+	EventManager<InputEvent>::addKeyedEvent(2, "~Hello World - shouldn't print 2!");
 	ProcessManager::run();
 
 	return 0;

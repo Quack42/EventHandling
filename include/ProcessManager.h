@@ -18,7 +18,7 @@ public:
 	template<typename Func, typename... Bindables>
 	static void requestProcess(Func func, Bindables... bindables) {
 		// Bind the arguments to make a simple void(void) function call; doing this here because most uses of this function will force the use of bind anyway.
-		auto callbackFunction = std::bind(func, bindables...);
+		std::function<void(void)> callbackFunction = std::bind(func, bindables...);
 		
 		// Store the request process.
 		processRequestsMutex.lock(); 	//Anything dealing with 'processRequests' is protected by a mutex.
