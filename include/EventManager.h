@@ -4,6 +4,8 @@
 #include "Subscription.h"
 #include "SubscriptionHandle.h"
 #include "ProcessManager.h"
+#include "Phase.h"
+#include "PhaseManager.h"
 
 #include <vector>
 #include <unordered_map>
@@ -39,17 +41,11 @@ public:
 
 	static void manageKeyedEvent(Key key, T event) {
 		// Add subscriptions that are to be added.
-		_addToAddSubscriptions();
 		_addToAddKeyedSubscriptions();
 
 		// Remove subscriptions if they are invalid
-		_removeInvalidSubscriptions();
 		_removeInvalidKeyedSubscriptions();
 
-		// Call subscriptions with events
-		for (auto & subscription : subscriptions) {
-			subscription->call(event);
-		}
 		// Call keyed subscriptions with events
 		try {
 			auto & subscriptionsForKey = keyedSubscriptionsMap.at(key);
@@ -102,11 +98,27 @@ public:
 		requestManagingProcessForEvent(T(arguments...));
 	}
 
+
 	template<typename KeyInputType, typename... Arguments>
 	static void addKeyedEvent(KeyInputType keyInput, Arguments... arguments) {
 		requestManagingProcessForEvent(T(arguments...));
 		requestManagingProcessForKeyedEvent(Key(keyInput), T(arguments...));
 	}
+
+	template<typename... Arguments>
+	static void addPhasedEvent(PhaseID phaseID, unsigned int offset, Arguments... arguments) {
+		//offset: 0 -> NOW
+		//offset: 1 -> NEXT RUN
+		// etc.
+		std::function<void(void)> eventManagementFunction = std::bind(&EventManager<T>::manageEvent, T(arguments...));
+		PhaseManager::registerEventCallback(phaseID, offset, eventManagementFunction);
+	}
+
+	// template<typename... Arguments>
+	// static void addPhaseEndEvent(PhaseID phaseID, Arguments... arguments) {
+	// 	// Events that need to be run at the end of the phase.
+	// 	// phaseMap[phaseID].addToEndQueue(T(arguments...));
+	// }
 
 private:
 	static void requestManagingProcessForEvent(const T & event) {
@@ -116,10 +128,6 @@ private:
 	static void requestManagingProcessForKeyedEvent(const Key & key, const T & event) {
 		ProcessManager::requestProcess(&EventManager<T>::manageKeyedEvent, key, event);
 	}
-
-	// static void requestManagingProcess() {
-		// ProcessManager::requestProcess(&EventManager<T>::manage);
-	// }
 
 	static void _addToAddSubscriptions() {
 		// Swap out 'subscriptionsToAdd' list for an empty copy; this feels more neat and faster.
@@ -176,8 +184,6 @@ private:
 					subscriptionsForKey.begin(),
 					subscriptionsForKey.end(),
 					[](std::unique_ptr<Subscription<T>> & subscription) {
-						if (!subscription->isValid()){
-						}
 						return !subscription->isValid();
 					}
 				),

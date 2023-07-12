@@ -17,14 +17,14 @@ public:
 		subscription.incrementSubscriptionHandles();
 	}
 
-	SubscriptionHandle(SubscriptionHandle & other) :
+	SubscriptionHandle(SubscriptionHandle<T> & other) :
 			subscription(other.subscription)
 	{
 		subscription.incrementSubscriptionHandles();
 	}
 
 
-	SubscriptionHandle & operator=(SubscriptionHandle & rhs) {
+	SubscriptionHandle<T> & operator=(SubscriptionHandle<T> & rhs) {
 		this->subscription.decrementSubscriptionHandles();
 		this->subscription = rhs.subscription;
 		rhs.subscription.incrementSubscriptionHandles();

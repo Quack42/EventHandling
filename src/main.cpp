@@ -19,6 +19,22 @@ public:
 	}
 };
 
+class ComputeEvent {
+private:
+	int x;
+
+public:
+	ComputeEvent(const int & x) :
+			x(x)
+	{
+		// do nothing
+	}
+
+	const int & getX() const {
+		return x;
+	}
+};
+
 
 
 class InputEventReceiver {
@@ -69,6 +85,38 @@ public:
 	}
 };
 
+enum Phases_e {
+	e_Tick,
+	e_Graphics,
+	e_UI
+};
+
+
+
+class PhasedEventReceiver {
+private:
+	SubscriptionHandle<InputEvent> subscriberHandle_inputEvent;
+	SubscriptionHandle<ComputeEvent> subscriberHandle_computeEvent;
+public:
+	PhasedEventReceiver() :
+			subscriberHandle_inputEvent(EventManager<InputEvent>::subscribe(&PhasedEventReceiver::receiveInputEvent, this)),
+			subscriberHandle_computeEvent(EventManager<ComputeEvent>::subscribe(&PhasedEventReceiver::receiveComputeEvent, this))
+	{
+
+	}
+
+	void receiveInputEvent(InputEvent event) {
+		std::cout << "PIER-ie:" << event.getInputString() << std::endl;
+		EventManager<ComputeEvent>::addPhasedEvent(e_Tick, NOW, 41);
+		EventManager<ComputeEvent>::addPhasedEvent(e_Tick, NEXT, 40);
+	}
+	void receiveComputeEvent(ComputeEvent event) {
+		std::cout << "PIER-ce:" << event.getX() << std::endl;
+	}
+};
+
+
+
 
 
 int main() {
@@ -96,7 +144,7 @@ int main() {
 	std::cout << "------------" << std::endl;
 
 	{
-		KeyedInputEventReceiver kier(1);
+		KeyedInputEventReceiver kier1(1);
 		KeyedInputEventReceiver kier2(2);
 
 		EventManager<InputEvent>::addKeyedEvent(1, "Hello World1!");
@@ -108,12 +156,12 @@ int main() {
 		EventManager<InputEvent>::addKeyedEvent(1, "Hello World3!");
 		EventManager<InputEvent>::addKeyedEvent(2, "~Hello World3!");
 		ProcessManager::run();
-		kier.unsubscribe();
+		kier1.unsubscribe();
 		kier2.unsubscribe();
 		EventManager<InputEvent>::addKeyedEvent(1, "Hello World - shouldn't print 1!");
 		EventManager<InputEvent>::addKeyedEvent(2, "~Hello World - shouldn't print 1!");
 		ProcessManager::run();
-		kier.resubscribe();
+		kier1.resubscribe();
 		kier2.resubscribe();
 		EventManager<InputEvent>::addKeyedEvent(2, "~Hello World4!");
 		EventManager<InputEvent>::addKeyedEvent(1, "Hello World4!");
@@ -123,6 +171,40 @@ int main() {
 	EventManager<InputEvent>::addKeyedEvent(1, "Hello World - shouldn't print 2!");
 	EventManager<InputEvent>::addKeyedEvent(2, "~Hello World - shouldn't print 2!");
 	ProcessManager::run();
+
+	std::cout << "------------" << std::endl;
+
+	{
+		PhasedEventReceiver pier;
+
+		PhaseManager::queuePhase(e_Tick);
+		PhaseManager::queuePhase(e_Graphics);
+		PhaseManager::queuePhase(e_UI);
+		PhaseManager::queuePhase(e_Tick);
+		PhaseManager::queuePhase(e_Graphics);
+		PhaseManager::queuePhase(e_UI);
+
+		{
+			//Phase: tick
+			EventManager<InputEvent>::addPhasedEvent(e_Tick, NOW, "First cycle tick");
+			EventManager<InputEvent>::addPhasedEvent(e_Tick, NEXT, "Second cycle tick");
+			EventManager<ComputeEvent>::addPhasedEvent(e_Tick, NOW, 42);
+		}
+		{
+			//Phase: graphics
+			EventManager<InputEvent>::addPhasedEvent(e_Graphics, NOW, "First cycle graphics");
+			EventManager<InputEvent>::addPhasedEvent(e_Graphics, NEXT, "Second cycle graphics");
+			EventManager<ComputeEvent>::addPhasedEvent(e_Graphics, NOW, 43);
+		}
+		{
+			//Phase: UI
+			EventManager<InputEvent>::addPhasedEvent(e_UI, NOW, "First cycle UI");
+			EventManager<InputEvent>::addPhasedEvent(e_UI, NEXT, "Second cycle UI");
+			EventManager<ComputeEvent>::addPhasedEvent(e_UI, NOW, 44);
+		}
+
+		ProcessManager::run();
+	}
 
 	return 0;
 }
