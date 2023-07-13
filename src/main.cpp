@@ -99,7 +99,7 @@ private:
 	SubscriptionHandle<ComputeEvent> subscriberHandle_computeEvent;
 public:
 	PhasedEventReceiver() :
-			subscriberHandle_inputEvent(EventManager<InputEvent>::subscribe(&PhasedEventReceiver::receiveInputEvent, this)),
+			subscriberHandle_inputEvent(&PhasedEventReceiver::receiveInputEvent, this),
 			subscriberHandle_computeEvent(EventManager<ComputeEvent>::subscribe(&PhasedEventReceiver::receiveComputeEvent, this))
 	{
 

@@ -11,6 +11,9 @@ public:
 		subscription.decrementSubscriptionHandles();
 	}
 
+	template<typename Func, typename... Args>
+	SubscriptionHandle(Func func, Args... args);
+
 	SubscriptionHandle(Subscription<T> & subscription) :
 			subscription(subscription)
 	{

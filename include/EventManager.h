@@ -57,8 +57,9 @@ public:
 		}
 	}
 
+
 	template<typename Func, typename... Bindables>
-	static SubscriptionHandle<T> subscribe(Func func, Bindables... bindables){
+	static Subscription<T> & subscribeRaw(Func func, Bindables... bindables){
 		// Bind the arguments to make a simple void(void) function call; doing this here because most uses of this function will force the use of bind anyway.
 		auto callbackFunction = std::bind(func, bindables..., std::placeholders::_1); 	// Leave a spot open with std::placeholders::_1 for the event type.
 
@@ -66,11 +67,21 @@ public:
 		subscriptionsToAddMutex.lock(); 	// Lock because all interactions with subscriptionsToAdd are mutex protected.
 		// Add subscription to list.
 		subscriptionsToAdd.emplace_back(std::make_unique<Subscription<T>>(callbackFunction));
-		// Get a reference to create a SubscriptionHandle<>
+		// Get a reference to return.
 		std::unique_ptr<Subscription<T>> & subscriptionRef_up = subscriptionsToAdd.back();
-		// Create a SubscriptionHandle<> to return.
-		SubscriptionHandle<T> ret(*subscriptionRef_up);
+		Subscription<T> & subscriptionRef = *subscriptionRef_up;
 		subscriptionsToAddMutex.unlock();
+
+		return subscriptionRef;
+	}
+
+	template<typename Func, typename... Bindables>
+	static SubscriptionHandle<T> subscribe(Func func, Bindables... bindables){
+		// Subscribe and get a reference create a SusbcriptionHandle<>.
+		Subscription<T> & subscriptionRef = subscribeRaw(func, bindables...);
+
+		// Create a SubscriptionHandle<> to return.
+		SubscriptionHandle<T> ret(subscriptionRef);
 
 		return ret;
 	}
@@ -194,3 +205,11 @@ private:
 		}
 	}
 };
+
+template<typename T>
+template<typename Func, typename... Args>
+SubscriptionHandle<T>::SubscriptionHandle(Func func, Args... args) :
+		subscription(EventManager<T>::subscribeRaw(func, args...))
+{
+	subscription.incrementSubscriptionHandles();
+}
