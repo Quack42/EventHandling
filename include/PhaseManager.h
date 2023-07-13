@@ -46,6 +46,8 @@ private:
 
 	static inline std::unordered_map<PhaseID, std::vector<DelayedPhaseEvent>> delayedPhaseEventMap;
 
+	static inline std::function<void(void)> phaseQueueEmptyCallback;
+
 public:
 	static void managePhases() {
 		// If nothing to do; then don't do it.
@@ -59,12 +61,6 @@ public:
 
 		// Execute the corresponding phase.
 		phaseMap[phaseID].run();
-
-		// If there's more phases to execute, schedule their execution.
-		// NOTE: Scheduling the next phase execution here gives non-phased events priority over phased events.
-		if (!phaseQueue.empty()) {
-			requestManagingProcessPhases();
-		}
 
 		// Update the delayed phase events; and schedule them if necessary.
 		if(delayedPhaseEventMap.contains(phaseID)) {
@@ -100,6 +96,16 @@ public:
 				delayedPhaseEventMap.erase(phaseID);
 			}
 		}
+
+		// If there's more phases to execute, schedule their execution.
+		// NOTE: Scheduling the next phase execution here gives non-phased events priority over phased events.
+		if (!phaseQueue.empty()) {
+			requestManagingProcessPhases();
+		} else {
+			if (phaseQueueEmptyCallback) {
+				phaseQueueEmptyCallback();
+			}
+		}
 	}
 
 	static void queuePhase(PhaseID phaseID) {
@@ -107,6 +113,27 @@ public:
 		if (phaseQueue.size() == 1) {
 			requestManagingProcessPhases();
 		}
+	}
+
+	static void runUntilEmpty() {
+		requestManagingProcessPhases();
+	}
+
+	static void setPhaseQueueEmptyCallback(std::function<void(void)> phaseQueueEmptyCallback) {
+		PhaseManager::phaseQueueEmptyCallback = phaseQueueEmptyCallback;
+		// if (phaseQueue.empty()) {
+		// 	if (phaseQueueEmptyCallback) {
+		// 		phaseQueueEmptyCallback();
+		// 	}
+		// }
+	}
+
+	static void setPhaseStartCallback(PhaseID phaseID, std::function<void(void)> phaseStartCallback) {
+		phaseMap[phaseID].setPhaseStartCallback(phaseStartCallback);
+	}
+
+	static void setPhaseEndCallback(PhaseID phaseID, std::function<void(void)> phaseEndCallback) {
+		phaseMap[phaseID].setPhaseEndCallback(phaseEndCallback);
 	}
 
 	static void registerEventCallback(PhaseID phaseID, unsigned int offset, std::function<void(void)> eventManagementFunction) {

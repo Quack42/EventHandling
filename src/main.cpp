@@ -177,12 +177,37 @@ int main() {
 	{
 		PhasedEventReceiver pier;
 
+		int counter = 0;
 		PhaseManager::queuePhase(e_Tick);
 		PhaseManager::queuePhase(e_Graphics);
 		PhaseManager::queuePhase(e_UI);
-		PhaseManager::queuePhase(e_Tick);
-		PhaseManager::queuePhase(e_Graphics);
-		PhaseManager::queuePhase(e_UI);
+		PhaseManager::setPhaseQueueEmptyCallback([&counter](){
+			if (counter < 3) { 	// Run for 3 times.
+				PhaseManager::queuePhase(e_Tick);
+				PhaseManager::queuePhase(e_Graphics);
+				PhaseManager::queuePhase(e_UI);
+			}
+			counter++;
+		});
+
+		PhaseManager::setPhaseStartCallback(e_Tick, [](){
+			std::cout << "e_Tick - start!" << std::endl;
+		});
+		PhaseManager::setPhaseEndCallback(e_Tick, [](){
+			std::cout << "e_Tick - end!" << std::endl;
+		});
+		PhaseManager::setPhaseStartCallback(e_Graphics, [](){
+			std::cout << "e_Graphics - start!" << std::endl;
+		});
+		PhaseManager::setPhaseEndCallback(e_Graphics, [](){
+			std::cout << "e_Graphics - end!" << std::endl;
+		});
+		PhaseManager::setPhaseStartCallback(e_UI, [](){
+			std::cout << "e_UI - start!" << std::endl;
+		});
+		PhaseManager::setPhaseEndCallback(e_UI, [](){
+			std::cout << "e_UI - end!" << std::endl;
+		});
 
 		{
 			//Phase: tick
