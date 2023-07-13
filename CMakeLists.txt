@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20.2)
-project(BloodClot_Control LANGUAGES CXX)
+project(EventHandling LANGUAGES CXX)
 
 
 
