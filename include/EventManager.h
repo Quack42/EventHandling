@@ -114,12 +114,6 @@ public:
 		PhaseManager::registerEventCallback(phaseID, offset, eventManagementFunction);
 	}
 
-	// template<typename... Arguments>
-	// static void addPhaseEndEvent(PhaseID phaseID, Arguments... arguments) {
-	// 	// Events that need to be run at the end of the phase.
-	// 	// phaseMap[phaseID].addToEndQueue(T(arguments...));
-	// }
-
 private:
 	static void requestManagingProcessForEvent(const T & event) {
 		ProcessManager::requestProcess(&EventManager<T>::manageEvent, event);
