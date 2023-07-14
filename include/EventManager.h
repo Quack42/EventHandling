@@ -125,6 +125,15 @@ public:
 		PhaseManager::registerEventCallback(phaseID, offset, eventManagementFunction);
 	}
 
+	template<typename KeyInputType, typename... Arguments>
+	static void addPhasedKeyedEvent(PhaseID phaseID, KeyInputType keyInput, unsigned int offset, Arguments... arguments) {
+		//offset: 0 -> NOW
+		//offset: 1 -> NEXT RUN
+		// etc.
+		std::function<void(void)> eventManagementFunction = std::bind(&EventManager<T>::manageKeyedEvent, Key(keyInput), T(arguments...));
+		PhaseManager::registerEventCallback(phaseID, offset, eventManagementFunction);
+	}
+
 private:
 	static void requestManagingProcessForEvent(const T & event) {
 		ProcessManager::requestProcess(&EventManager<T>::manageEvent, event);
@@ -212,4 +221,12 @@ SubscriptionHandle<T>::SubscriptionHandle(Func func, Args... args) :
 		subscription(EventManager<T>::subscribeRaw(func, args...))
 {
 	subscription.incrementSubscriptionHandles();
+}
+
+template<typename T>
+template<typename Func, typename KeyInputType, typename... Args>
+KeyedSubscriptionHandle<T>::KeyedSubscriptionHandle(Func func, KeyInputType keyInput, Args... args) :
+		subscriptionHandle(EventManager<T>::keyedSubscribe(func, keyInput, args...))
+{
+	//nothing to do.
 }

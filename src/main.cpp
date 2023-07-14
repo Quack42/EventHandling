@@ -96,13 +96,19 @@ enum Phases_e {
 class PhasedEventReceiver {
 private:
 	SubscriptionHandle<InputEvent> subscriberHandle_inputEvent;
+	KeyedSubscriptionHandle<InputEvent> subscriberHandle_inputEvent_keyed;
 	SubscriptionHandle<ComputeEvent> subscriberHandle_computeEvent;
 public:
 	PhasedEventReceiver() :
 			subscriberHandle_inputEvent(&PhasedEventReceiver::receiveInputEvent, this),
+			subscriberHandle_inputEvent_keyed(&PhasedEventReceiver::receiveInputEvent_keyed, 1, this), 	//1 is key
 			subscriberHandle_computeEvent(EventManager<ComputeEvent>::subscribe(&PhasedEventReceiver::receiveComputeEvent, this))
 	{
 
+	}
+
+	void receiveInputEvent_keyed(InputEvent event) {
+		std::cout << "PIER-ie-k:" << event.getInputString() << std::endl;
 	}
 
 	void receiveInputEvent(InputEvent event) {
@@ -212,6 +218,10 @@ int main() {
 		{
 			//Phase: tick
 			EventManager<InputEvent>::addPhasedEvent(e_Tick, NOW, "First cycle tick");
+			EventManager<InputEvent>::addPhasedKeyedEvent(e_Tick, 1, NOW, "First cycle tick - 1 NOW");
+			EventManager<InputEvent>::addPhasedKeyedEvent(e_Tick, 2, NOW, "First cycle tick - 2 NOW");
+			EventManager<InputEvent>::addPhasedKeyedEvent(e_Tick, 1, NEXT, "First cycle tick - 1 NEXT");
+			EventManager<InputEvent>::addPhasedKeyedEvent(e_Tick, 2, NEXT, "First cycle tick - 2 NEXT");
 			EventManager<InputEvent>::addPhasedEvent(e_Tick, NEXT, "Second cycle tick");
 			EventManager<ComputeEvent>::addPhasedEvent(e_Tick, NOW, 42);
 		}

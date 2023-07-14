@@ -12,7 +12,7 @@ public:
 	}
 
 	template<typename Func, typename... Args>
-	SubscriptionHandle(Func func, Args... args);
+	SubscriptionHandle(Func func, Args... args); 	//defined in EventManager.h
 
 	SubscriptionHandle(Subscription<T> & subscription) :
 			subscription(subscription)
@@ -40,5 +40,37 @@ public:
 
 	void resubscribe() {
 		subscription.resubscribe();
+	}
+};
+
+template <typename T>
+class KeyedSubscriptionHandle { 	//Literally just a wrapper for SubscriptionHandle with one slightly different constructor ()
+private:
+	SubscriptionHandle<T> subscriptionHandle;
+public:
+	template<typename Func, typename KeyInputType, typename... Args>
+	KeyedSubscriptionHandle(Func func, KeyInputType keyInput, Args... args); 	//defined in EventManager.h
+
+	KeyedSubscriptionHandle(Subscription<T> & subscription) :
+			subscriptionHandle(subscription)
+	{
+	}
+
+	KeyedSubscriptionHandle(KeyedSubscriptionHandle<T> & other) :
+			subscriptionHandle(other)
+	{
+	}
+
+	KeyedSubscriptionHandle<T> & operator=(KeyedSubscriptionHandle<T> & rhs) {
+		this->subscriptionHandle = rhs.subscriptionHandle;
+		return *this;
+	}
+
+	void unsubscribe() {
+		subscriptionHandle.unsubscribe();
+	}
+
+	void resubscribe() {
+		subscriptionHandle.resubscribe();
 	}
 };
