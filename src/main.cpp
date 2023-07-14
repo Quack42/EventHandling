@@ -238,6 +238,9 @@ int main() {
 			EventManager<ComputeEvent>::addPhasedEvent(e_UI, NOW, 44);
 		}
 
+		KeyedSubscriptionHandle<InputEvent> dummyKSH;
+		SubscriptionHandle<InputEvent> dummySH;
+
 		ProcessManager::run();
 	}
 

@@ -14,7 +14,13 @@ private:
 	std::recursive_mutex deletionDelayMutex;
 	bool subscribed;
 
+	Subscription() {
+		//dummy subscription.
+	}
+
 public:
+	static inline Subscription<T> DummySubscription;
+
 	Subscription(std::function<void(T&)> subscriberFunction) :
 			subscriberFunction(subscriberFunction),
 			subscriptionHandles(0),

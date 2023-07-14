@@ -7,6 +7,12 @@ class SubscriptionHandle {
 private:
 	Subscription<T> & subscription;
 public:
+	SubscriptionHandle() :
+			subscription(Subscription<T>::DummySubscription)
+	{
+		//This creates a handle for an invalid subscription.
+	}
+
 	virtual ~SubscriptionHandle() {
 		subscription.decrementSubscriptionHandles();
 	}
@@ -48,6 +54,8 @@ class KeyedSubscriptionHandle { 	//Literally just a wrapper for SubscriptionHand
 private:
 	SubscriptionHandle<T> subscriptionHandle;
 public:
+	KeyedSubscriptionHandle(){} 	// An invalid subscription.
+
 	template<typename Func, typename KeyInputType, typename... Args>
 	KeyedSubscriptionHandle(Func func, KeyInputType keyInput, Args... args); 	//defined in EventManager.h
 
