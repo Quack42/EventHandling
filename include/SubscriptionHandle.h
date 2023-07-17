@@ -32,11 +32,9 @@ public:
 		subscription.incrementSubscriptionHandles();
 	}
 
-
 	SubscriptionHandle<T> & operator=(SubscriptionHandle<T> & rhs) {
-		this->subscription.decrementSubscriptionHandles();
-		this->subscription = rhs.subscription;
-		rhs.subscription.incrementSubscriptionHandles();
+		this->~SubscriptionHandle<T>();
+		new (this) SubscriptionHandle<T>(rhs);
 		return *this;
 	}
 
