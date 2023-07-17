@@ -26,13 +26,13 @@ public:
 		subscription.incrementSubscriptionHandles();
 	}
 
-	SubscriptionHandle(SubscriptionHandle<T> & other) :
+	SubscriptionHandle(const SubscriptionHandle<T> & other) :
 			subscription(other.subscription)
 	{
 		subscription.incrementSubscriptionHandles();
 	}
 
-	SubscriptionHandle<T> & operator=(SubscriptionHandle<T> & rhs) {
+	SubscriptionHandle<T> & operator=(const SubscriptionHandle<T> & rhs) {
 		this->~SubscriptionHandle<T>();
 		new (this) SubscriptionHandle<T>(rhs);
 		return *this;
@@ -62,12 +62,12 @@ public:
 	{
 	}
 
-	KeyedSubscriptionHandle(KeyedSubscriptionHandle<T> & other) :
+	KeyedSubscriptionHandle(const KeyedSubscriptionHandle<T> & other) :
 			subscriptionHandle(other)
 	{
 	}
 
-	KeyedSubscriptionHandle<T> & operator=(KeyedSubscriptionHandle<T> & rhs) {
+	KeyedSubscriptionHandle<T> & operator=(const KeyedSubscriptionHandle<T> & rhs) {
 		this->subscriptionHandle = rhs.subscriptionHandle;
 		return *this;
 	}
