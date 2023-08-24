@@ -17,12 +17,12 @@
 template <typename T>
 class EventManager {
 private:
-	static inline std::vector<std::unique_ptr<Subscription<T>>> subscriptions;
-	static inline std::vector<std::unique_ptr<Subscription<T>>> subscriptionsToAdd;
+	static inline std::vector<std::shared_ptr<Subscription<T>>> subscriptions;
+	static inline std::vector<std::shared_ptr<Subscription<T>>> subscriptionsToAdd;
 	static inline std::mutex subscriptionsToAddMutex;
 
-	static inline std::unordered_map<Key, std::vector<std::unique_ptr<Subscription<T>>>> keyedSubscriptionsMap;
-	static inline std::vector<std::pair<Key, std::unique_ptr<Subscription<T>>>> keyedSubscriptionsToAdd;
+	static inline std::unordered_map<Key, std::vector<std::shared_ptr<Subscription<T>>>> keyedSubscriptionsMap;
+	static inline std::vector<std::pair<Key, std::shared_ptr<Subscription<T>>>> keyedSubscriptionsToAdd;
 	static inline std::mutex keyedSubscriptionsToAddMutex;
 
 public:
@@ -59,29 +59,29 @@ public:
 
 
 	template<typename Func, typename... Bindables>
-	static Subscription<T> & subscribeRaw(Func func, Bindables... bindables){
+	static std::weak_ptr<Subscription<T>> subscribeRaw(Func func, Bindables... bindables){
 		// Bind the arguments to make a simple void(void) function call; doing this here because most uses of this function will force the use of bind anyway.
 		auto callbackFunction = std::bind(func, bindables..., std::placeholders::_1); 	// Leave a spot open with std::placeholders::_1 for the event type.
 
 		/// Add subscription to list of to-be-added subscriptions; return a SubscriptionHandle<> to the user.
 		subscriptionsToAddMutex.lock(); 	// Lock because all interactions with subscriptionsToAdd are mutex protected.
 		// Add subscription to list.
-		subscriptionsToAdd.emplace_back(std::make_unique<Subscription<T>>(callbackFunction));
+		subscriptionsToAdd.emplace_back(std::make_shared<Subscription<T>>(callbackFunction));
 		// Get a reference to return.
-		std::unique_ptr<Subscription<T>> & subscriptionRef_up = subscriptionsToAdd.back();
-		Subscription<T> & subscriptionRef = *subscriptionRef_up;
+		std::shared_ptr<Subscription<T>> & subscriptionRef_sp = subscriptionsToAdd.back();
+		std::weak_ptr<Subscription<T>> subscription_wp(subscriptionRef_sp);
 		subscriptionsToAddMutex.unlock();
 
-		return subscriptionRef;
+		return subscription_wp;
 	}
 
 	template<typename Func, typename... Bindables>
 	static SubscriptionHandle<T> subscribe(Func func, Bindables... bindables){
 		// Subscribe and get a reference create a SusbcriptionHandle<>.
-		Subscription<T> & subscriptionRef = subscribeRaw(func, bindables...);
+		std::weak_ptr<Subscription<T>> subscription_wp = subscribeRaw(func, bindables...);
 
 		// Create a SubscriptionHandle<> to return.
-		SubscriptionHandle<T> ret(subscriptionRef);
+		SubscriptionHandle<T> ret(subscription_wp);
 
 		return ret;
 	}
@@ -94,11 +94,12 @@ public:
 		/// Add subscription to list of to-be-added subscriptions; return a SubscriptionHandle<> to the user.
 		keyedSubscriptionsToAddMutex.lock(); 	// Lock because all interactions with subscriptionsToAdd are mutex protected.
 		// Add subscription to list.
-		keyedSubscriptionsToAdd.emplace_back(Key(keyInput), std::make_unique<Subscription<T>>(callbackFunction));
+		keyedSubscriptionsToAdd.emplace_back(Key(keyInput), std::make_shared<Subscription<T>>(callbackFunction));
 		// Get a reference to create a SubscriptionHandle<>
-		std::unique_ptr<Subscription<T>> & keyedSubscriptionRef_up = std::get<1>(keyedSubscriptionsToAdd.back()); 	//get the second item in the pair
+		std::shared_ptr<Subscription<T>> & keyedSubscriptionRef_sp = std::get<1>(keyedSubscriptionsToAdd.back()); 	//get the second item in the pair
 		// Create a SubscriptionHandle<> to return.
-		SubscriptionHandle<T> ret(*keyedSubscriptionRef_up);
+		std::weak_ptr<Subscription<T>> keyedSubscriptionRef_wp(keyedSubscriptionRef_sp);
+		SubscriptionHandle<T> ret(keyedSubscriptionRef_wp);
 		keyedSubscriptionsToAddMutex.unlock();
 
 		return ret;
@@ -145,7 +146,7 @@ private:
 
 	static void _addToAddSubscriptions() {
 		// Swap out 'subscriptionsToAdd' list for an empty copy; this feels more neat and faster.
-		std::vector<std::unique_ptr<Subscription<T>>> _subscriptionsToAdd;
+		std::vector<std::shared_ptr<Subscription<T>>> _subscriptionsToAdd;
 		subscriptionsToAddMutex.lock();
 		std::swap(subscriptionsToAdd, _subscriptionsToAdd);
 		subscriptionsToAddMutex.unlock();
@@ -157,20 +158,20 @@ private:
 
 	static void _addToAddKeyedSubscriptions() {
 		// Swap out 'keyedSubscriptionsToAdd' list for an empty copy; this feels more neat and faster.
-		std::vector<std::pair<Key, std::unique_ptr<Subscription<T>>>> _keyedSubscriptionsToAdd;
+		std::vector<std::pair<Key, std::shared_ptr<Subscription<T>>>> _keyedSubscriptionsToAdd;
 		keyedSubscriptionsToAddMutex.lock();
 		std::swap(keyedSubscriptionsToAdd, _keyedSubscriptionsToAdd);
 		keyedSubscriptionsToAddMutex.unlock();
 
 		// Insert the to-be-added subscriptions to the subscriptions list.
-		for (std::pair<Key, std::unique_ptr<Subscription<T>>> & _keyedSubscriptionToAdd : _keyedSubscriptionsToAdd) {
+		for (std::pair<Key, std::shared_ptr<Subscription<T>>> & _keyedSubscriptionToAdd : _keyedSubscriptionsToAdd) {
 			// Get key.
 			const Key & keyRef = std::get<0>(_keyedSubscriptionToAdd);
 			// Get a reference to the vector we're adding the subscription to.
 			auto & subscriptionVectorToAddTo = keyedSubscriptionsMap[keyRef];
 
 			// Create a dummy element.
-			subscriptionVectorToAddTo.push_back(std::unique_ptr<Subscription<T>>());
+			subscriptionVectorToAddTo.push_back(std::shared_ptr<Subscription<T>>());
 			// Switch the dummy element with the real thing.
 			std::swap(std::get<1>(_keyedSubscriptionToAdd), subscriptionVectorToAddTo.back());
 		}
@@ -181,7 +182,7 @@ private:
 			std::remove_if(
 				subscriptions.begin(),
 				subscriptions.end(),
-				[](std::unique_ptr<Subscription<T>> & subscription) {
+				[](std::shared_ptr<Subscription<T>> & subscription) {
 					return !subscription->isValid();
 				}
 			),
@@ -197,7 +198,7 @@ private:
 				std::remove_if(
 					subscriptionsForKey.begin(),
 					subscriptionsForKey.end(),
-					[](std::unique_ptr<Subscription<T>> & subscription) {
+					[](std::shared_ptr<Subscription<T>> & subscription) {
 						return !subscription->isValid();
 					}
 				),
@@ -218,9 +219,12 @@ private:
 template<typename T>
 template<typename Func, typename... Args>
 SubscriptionHandle<T>::SubscriptionHandle(Func func, Args... args) :
-		subscription(EventManager<T>::subscribeRaw(func, args...))
+		subscription_wp(EventManager<T>::subscribeRaw(func, args...))
 {
-	subscription.incrementSubscriptionHandles();
+	std::shared_ptr<Subscription<T>> subscription_sp = subscription_wp.lock();
+	if (subscription_sp) {
+		subscription_sp->incrementSubscriptionHandles();
+	}
 }
 
 template<typename T>

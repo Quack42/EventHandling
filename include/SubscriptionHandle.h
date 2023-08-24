@@ -2,34 +2,46 @@
 
 #include "Subscription.h"
 
+#include <memory>
+
 template <typename T>
 class SubscriptionHandle {
 private:
-	Subscription<T> & subscription;
+	// Subscription<T> & subscription;
+	std::weak_ptr<Subscription<T>> subscription_wp;
 public:
 	SubscriptionHandle() :
-			subscription(Subscription<T>::DummySubscription)
+			subscription_wp()
 	{
 		//This creates a handle for an invalid subscription.
 	}
 
 	virtual ~SubscriptionHandle() {
-		subscription.decrementSubscriptionHandles();
+		std::shared_ptr<Subscription<T>> subscription_sp = subscription_wp.lock();
+		if (subscription_sp) {
+			subscription_sp->decrementSubscriptionHandles();
+		}
 	}
 
 	template<typename Func, typename... Args>
 	SubscriptionHandle(Func func, Args... args); 	//defined in EventManager.h
 
-	SubscriptionHandle(Subscription<T> & subscription) :
-			subscription(subscription)
+	SubscriptionHandle(std::weak_ptr<Subscription<T>> & subscription_wp) :
+			subscription_wp(subscription_wp)
 	{
-		subscription.incrementSubscriptionHandles();
+		std::shared_ptr<Subscription<T>> subscription_sp = subscription_wp.lock();
+		if (subscription_sp) {
+			subscription_sp->incrementSubscriptionHandles();
+		}
 	}
 
 	SubscriptionHandle(const SubscriptionHandle<T> & other) :
-			subscription(other.subscription)
+			subscription_wp(other.subscription_wp)
 	{
-		subscription.incrementSubscriptionHandles();
+		std::shared_ptr<Subscription<T>> subscription_sp = subscription_wp.lock();
+		if (subscription_sp) {
+			subscription_sp->incrementSubscriptionHandles();
+		}
 	}
 
 	SubscriptionHandle<T> & operator=(const SubscriptionHandle<T> & rhs) {
@@ -39,11 +51,17 @@ public:
 	}
 
 	void unsubscribe() {
-		subscription.unsubscribe();
+		std::shared_ptr<Subscription<T>> subscription_sp = subscription_wp.lock();
+		if (subscription_sp) {
+			subscription_sp->unsubscribe();
+		}
 	}
 
 	void resubscribe() {
-		subscription.resubscribe();
+		std::shared_ptr<Subscription<T>> subscription_sp = subscription_wp.lock();
+		if (subscription_sp) {
+			subscription_sp->resubscribe();
+		}
 	}
 };
 
