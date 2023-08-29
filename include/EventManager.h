@@ -133,6 +133,7 @@ public:
 		// etc.
 		std::function<void(void)> eventManagementFunction = std::bind(&EventManager<T>::manageKeyedEvent, Key(keyInput), T(arguments...));
 		PhaseManager::registerEventCallback(phaseID, offset, eventManagementFunction);
+		addPhasedEvent(phaseID, offset, arguments...);
 	}
 
 private:
