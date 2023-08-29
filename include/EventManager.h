@@ -131,9 +131,9 @@ public:
 		//offset: 0 -> NOW
 		//offset: 1 -> NEXT RUN
 		// etc.
+		addPhasedEvent(phaseID, offset, arguments...);
 		std::function<void(void)> eventManagementFunction = std::bind(&EventManager<T>::manageKeyedEvent, Key(keyInput), T(arguments...));
 		PhaseManager::registerEventCallback(phaseID, offset, eventManagementFunction);
-		addPhasedEvent(phaseID, offset, arguments...);
 	}
 
 private:
